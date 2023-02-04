@@ -1,0 +1,38 @@
+# TODO: Add a database other than sqlite
+# TODO: Run app under a wsgi server like gunicorn
+# TODO: Add nginx as frontend and hosting static files
+# TODO: Add celery beat for periodic tasks aka crontab
+version: '3.4'
+
+# setup some defaults so we don't have to repeat ourselves
+x-flask:
+  &flask
+  image: flask
+  build:
+    context: .
+    dockerfile: ./Dockerfile
+  depends_on:
+    - redis
+  env_file:
+        - ./.env
+  volumes:
+    - ./instance:/app/instance
+
+services:
+
+  redis:
+    image: redis:latest
+    restart: always
+
+  flask:
+    <<: *flask
+    command: flask --app run:flask_app run --host=0.0.0.0
+    ports:
+      - 5000:5000
+
+  celery:
+    <<: *flask
+    command: celery --app run.celery_app worker --loglevel=info
+    deploy:
+      # Set this to a higher number to scale up workers
+      replicas: 1
